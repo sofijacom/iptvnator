@@ -86,9 +86,6 @@ importers:
       drizzle-orm:
         specifier: 0.44.6
         version: 0.44.6(@types/better-sqlite3@7.6.13)(better-sqlite3@12.5.0)
-      electron-builder-sandbox-fix:
-        specifier: 1.1.1
-        version: 1.1.1
       electron-conf:
         specifier: 1.3.0
         version: 1.3.0(electron@39.2.7)
@@ -107,9 +104,6 @@ importers:
       lodash:
         specifier: 4.17.21
         version: 4.17.21
-      moment:
-        specifier: 2.30.1
-        version: 2.30.1
       mpegts.js:
         specifier: 1.8.0
         version: 1.8.0
@@ -6161,9 +6155,6 @@ packages:
     engines: {node: '>=0.10.0'}
     hasBin: true
 
-  electron-builder-sandbox-fix@1.1.1:
-    resolution: {integrity: sha512-+gSiLZ7KZDRr3ATm89eud96QwURauUXMzB2lbzZffkAYMC4yyF2fqq0W2xoTg38eDVFCJThcoyW1p8Ph/unxoA==}
-
   electron-builder@25.1.8:
     resolution: {integrity: sha512-poRgAtUHHOnlzZnc9PK4nzG53xh74wj2Jy7jkTrqZ0MWPoHGh1M2+C//hGeYdA+4K8w4yiVCNYoLXF7ySj2Wig==}
     engines: {node: '>=14.0.0'}
@@ -8605,9 +8596,6 @@ packages:
     resolution: {integrity: sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==}
     engines: {node: '>=10'}
     hasBin: true
-
-  moment@2.30.1:
-    resolution: {integrity: sha512-uEmtNhbDOrWPFS+hdjFCBfy9f2YoyzRpwcl+DqpC6taX21FzsTLQVbMV/W7PzNSX6x/bhC1zA3c2UQ5NzH6how==}
 
   mpd-parser@0.22.0:
     resolution: {integrity: sha512-P2GSZGTlud9zGr1IU/wd+dwK5v+cdeHd9ys+8y0Yo4kADfkKyYET37oIvOoQiLGp6k7CTNO7navdyV2mfG0yzw==}
@@ -18453,10 +18441,6 @@ snapshots:
     dependencies:
       jake: 10.9.4
 
-  electron-builder-sandbox-fix@1.1.1:
-    dependencies:
-      chalk: 4.1.2
-
   electron-builder@25.1.8:
     dependencies:
       app-builder-lib: 25.1.8(dmg-builder@25.1.8)
@@ -21882,8 +21866,6 @@ snapshots:
   mkdirp-classic@0.5.3: {}
 
   mkdirp@1.0.4: {}
-
-  moment@2.30.1: {}
 
   mpd-parser@0.22.0:
     dependencies:

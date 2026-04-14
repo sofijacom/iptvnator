@@ -31,6 +31,7 @@ The application is a cross-platform, open-source project built with Electron and
 - EPG support (TV Guide) with detailed information
 - TV archive/catchup/timeshift functionality
 - Group-based channel list
+- Read-only M3U channel details from the channel context menu
 - Favorite channels management
 - Global favorites aggregated from all playlists
 - HTML video player with HLS.js support or Video.js-based player
@@ -165,6 +166,20 @@ Alternatively, you can launch IPTVnator from the terminal with the flag:
 ```bash
 iptvnator --no-sandbox
 ```
+
+### GNU/Linux: Wayland startup failure
+
+If IPTVnator exits on GNU/Linux with errors about failing to connect to
+Wayland or initialize the Ozone platform, force X11/XWayland instead:
+
+```bash
+iptvnator --ozone-platform=x11
+```
+
+This workaround is mainly for older or problematic Linux graphics stacks. The
+Snap package already includes this X11 override by default. For AppImage,
+direct binaries, and other Linux package formats, pass the flag manually when
+needed.
 
 ## How to Build and Develop
 

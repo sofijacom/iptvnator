@@ -56,6 +56,7 @@ import {
     RecentViewComponent,
     RecentViewItem,
 } from './recent-view/recent-view.component';
+import { ChannelListLoadingStateComponent } from '../channel-list-loading-state/channel-list-loading-state.component';
 
 function groupChannelsByTitle(channels: Channel[]): Record<string, Channel[]> {
     return channels.reduce<Record<string, Channel[]>>((groups, channel) => {
@@ -75,6 +76,7 @@ function groupChannelsByTitle(channels: Channel[]): Record<string, Channel[]> {
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         AllChannelsViewComponent,
+        ChannelListLoadingStateComponent,
         CommonModule,
         FavoritesViewComponent,
         GroupsViewComponent,
@@ -113,6 +115,7 @@ export class ChannelListContainerComponent implements OnInit, OnDestroy {
 
     /** Active view (all, groups, favorites, recent) */
     readonly activeView = input<string>('all');
+    readonly channelsLoading = input(false);
     readonly recentItems = input<PlaylistRecentlyViewedItem[]>([]);
     readonly sidebarWidth = input<number | null>(null);
     readonly sidebarWidthRequested = output<number>();
@@ -169,6 +172,17 @@ export class ChannelListContainerComponent implements OnInit, OnDestroy {
 
     /** Route-aware playlist ID for recent-item mutations */
     private readonly resolvedPlaylistId = this.playlistContext.resolvedPlaylistId;
+    private readonly activePlaylist = this.playlistContext.activePlaylist;
+
+    readonly hiddenGroupTitles = computed(() => {
+        const playlist = this.activePlaylist();
+
+        if (!playlist || playlist.serverUrl || playlist.macAddress) {
+            return [];
+        }
+
+        return playlist.hiddenGroupTitles ?? [];
+    });
 
     /** Displayed channels - filters out unfavorited channels in global favorites view */
     readonly displayedChannels = computed(() => {
@@ -281,7 +295,6 @@ export class ChannelListContainerComponent implements OnInit, OnDestroy {
 
     ngOnDestroy(): void {
         this.store.dispatch(ChannelActions.resetActiveChannel());
-        this.store.dispatch(ChannelActions.setChannels({ channels: [] }));
 
         if (this.epgRefreshInterval) {
             clearInterval(this.epgRefreshInterval);
@@ -327,6 +340,23 @@ export class ChannelListContainerComponent implements OnInit, OnDestroy {
         event.event.stopPropagation();
         this.store.dispatch(
             FavoritesActions.updateFavorites({ channel: event.channel })
+        );
+    }
+
+    onHiddenGroupTitlesChanged(hiddenGroupTitles: string[]): void {
+        const playlist = this.activePlaylist();
+
+        if (!playlist || playlist.serverUrl || playlist.macAddress) {
+            return;
+        }
+
+        this.store.dispatch(
+            PlaylistActions.updatePlaylistMeta({
+                playlist: {
+                    _id: playlist._id,
+                    hiddenGroupTitles,
+                } as PlaylistMeta,
+            })
         );
     }
 
