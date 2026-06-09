@@ -6,7 +6,7 @@ import {
 } from './electron-test-fixtures';
 
 test.describe('Electron App Smoke Test', () => {
-    test('app should start and display the dashboard', async ({ dataDir }) => {
+    test('@critical @electron app should start and display the dashboard', async ({ dataDir }) => {
         const app = await launchElectronApp(dataDir);
 
         try {
@@ -27,7 +27,7 @@ test.describe('Electron App Smoke Test', () => {
         }
     });
 
-    test('app should expose the expected main window properties', async ({
+    test('@critical @electron app should expose the expected main window properties', async ({
         dataDir,
     }) => {
         const app = await launchElectronApp(dataDir);
@@ -57,17 +57,22 @@ test.describe('Electron App Smoke Test', () => {
         }
     });
 
-    test('app should render workspace content', async ({ dataDir }) => {
+    test('@critical @electron app should render workspace content', async ({ dataDir }) => {
         const app = await launchElectronApp(dataDir);
 
         try {
             await expect(
-                app.mainWindow.getByRole('button', {
-                    name: 'Open command palette',
-                })
-            ).toBeVisible();
-            await expect(
                 app.mainWindow.getByRole('button', { name: 'Add playlist' })
+            ).toBeVisible();
+
+            const modifier =
+                process.platform === 'darwin' ? 'Meta' : 'Control';
+            await app.mainWindow.locator('body').focus();
+            await app.mainWindow.keyboard.press(`${modifier}+K`);
+            await expect(
+                app.mainWindow.locator(
+                    'mat-dialog-container app-workspace-command-palette'
+                )
             ).toBeVisible();
         } finally {
             await closeElectronApp(app);

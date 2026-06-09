@@ -12,8 +12,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import {
     PlayerContentInfo,
     ResolvedPortalPlayback,
-} from 'shared-interfaces';
+} from '@iptvnator/shared/interfaces';
+import type { PlaybackFallbackRequest } from '../playback-diagnostics/playback-diagnostics.util';
 import { WebPlayerViewComponent } from '../web-player-view/web-player-view.component';
+import type {
+    SeriesEpisodeMetadata,
+    SeriesPlaybackNavigation,
+} from './series-playback-navigation';
 
 @Component({
     selector: 'app-portal-inline-player',
@@ -34,6 +39,8 @@ import { WebPlayerViewComponent } from '../web-player-view/web-player-view.compo
 })
 export class PortalInlinePlayerComponent {
     readonly playback = input<ResolvedPortalPlayback | null>(null);
+    readonly episodeMetadata = input<SeriesEpisodeMetadata | null>(null);
+    readonly seriesNavigation = input<SeriesPlaybackNavigation | null>(null);
     readonly title = computed(() => this.playback()?.title ?? '');
     readonly streamUrl = computed(() => this.playback()?.streamUrl ?? '');
     readonly startTime = computed(() => this.playback()?.startTime ?? 0);
@@ -41,6 +48,16 @@ export class PortalInlinePlayerComponent {
         () => this.playback()?.contentInfo
     );
     readonly hasPlayback = computed(() => !!this.playback()?.streamUrl);
+    readonly episodeMetadataText = computed(() => {
+        const metadata = this.episodeMetadata();
+        if (!metadata) {
+            return '';
+        }
+
+        return metadata.title
+            ? `${metadata.label} - ${metadata.title}`
+            : metadata.label;
+    });
 
     readonly closed = output<void>();
     readonly timeUpdate = output<{
@@ -48,6 +65,10 @@ export class PortalInlinePlayerComponent {
         duration: number;
     }>();
     readonly streamUrlCopied = output<void>();
+    readonly externalFallbackRequested = output<PlaybackFallbackRequest>();
+    readonly playbackEnded = output<void>();
+    readonly previousEpisodeRequested = output<void>();
+    readonly nextEpisodeRequested = output<void>();
 
     onClose(): void {
         this.closed.emit();
@@ -59,5 +80,21 @@ export class PortalInlinePlayerComponent {
 
     onCopied(): void {
         this.streamUrlCopied.emit();
+    }
+
+    onExternalFallbackRequested(request: PlaybackFallbackRequest): void {
+        this.externalFallbackRequested.emit(request);
+    }
+
+    onPlaybackEnded(): void {
+        this.playbackEnded.emit();
+    }
+
+    onPreviousEpisodeRequested(): void {
+        this.previousEpisodeRequested.emit();
+    }
+
+    onNextEpisodeRequested(): void {
+        this.nextEpisodeRequested.emit();
     }
 }

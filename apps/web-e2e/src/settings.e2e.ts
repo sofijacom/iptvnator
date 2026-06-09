@@ -1,5 +1,6 @@
-import { expect, Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { join } from 'path';
+import { expect, test } from './fixtures';
 
 async function openSettings(page: Page) {
     await page.locator('a[href$="/workspace/settings"]').click();
@@ -22,12 +23,12 @@ test.describe('Settings', () => {
         await page.goto('/');
     });
 
-    test('Check settings page', async ({ page }) => {
+    test('@settings @web Check settings page', async ({ page }) => {
         await openSettings(page);
         await page.locator('.settings-back-button').click();
     });
 
-    test('Change video player', async ({ page }) => {
+    test('@settings @web Change video player', async ({ page }) => {
         await openSettings(page);
 
         const playerSelect = page.locator('[data-test-id="select-video-player"]');
@@ -47,23 +48,32 @@ test.describe('Settings', () => {
         );
     });
 
-    test('Change app theme', async ({ page }) => {
+    test('@settings @web Change app theme', async ({ page }) => {
         await openSettings(page);
+        // v0.22 compact theme picker exposes the segmented control as a
+        // radiogroup with options labelled just "Light"/"Dark"/"System".
+        // Scope to the theme radiogroup so we don't collide with the
+        // identically-labelled cover-size options below.
+        const themeGroup = page.locator(
+            '[data-test-id="select-theme"][role="radiogroup"]'
+        );
         await expect(
-            page.getByRole('radio', { name: 'System theme' })
+            themeGroup.getByRole('radio', { name: 'System', exact: true })
         ).toHaveAttribute('aria-checked', 'true');
-        await page.getByRole('radio', { name: 'Dark theme' }).click();
+        await themeGroup
+            .getByRole('radio', { name: 'Dark', exact: true })
+            .click();
 
         await saveSettings(page);
         await page.reload();
         await openSettings(page);
 
         await expect(
-            page.getByRole('radio', { name: 'Dark theme' })
+            themeGroup.getByRole('radio', { name: 'Dark', exact: true })
         ).toHaveAttribute('aria-checked', 'true');
     });
 
-    test('Change app language', async ({ page }) => {
+    test('@settings @web Change app language', async ({ page }) => {
         await openSettings(page);
         const languageSelect = page.locator('[data-test-id="select-language"]');
 
