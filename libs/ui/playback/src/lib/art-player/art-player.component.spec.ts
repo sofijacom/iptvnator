@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Channel } from '@iptvnator/shared/interfaces';
 import type { ArtPlayerComponent as ArtPlayerComponentInstance } from './art-player.component';
 
@@ -15,8 +16,10 @@ class MockArtplayer {
     readonly destroy = jest.fn();
     readonly currentTime = 0;
     readonly duration = 0;
+    volume: number;
 
     constructor(readonly options: Record<string, unknown>) {
+        this.volume = Number(options['volume'] ?? 1);
         artPlayerInstances.push(this);
     }
 }
@@ -31,9 +34,11 @@ class MockHls {
     static isSupported = jest.fn(() => true);
 
     readonly handlers = new Map<string, (...args: unknown[]) => void>();
-    readonly on = jest.fn((event: string, handler: (...args: unknown[]) => void) => {
-        this.handlers.set(event, handler);
-    });
+    readonly on = jest.fn(
+        (event: string, handler: (...args: unknown[]) => void) => {
+            this.handlers.set(event, handler);
+        }
+    );
     readonly loadSource = jest.fn();
     readonly attachMedia = jest.fn();
     readonly destroy = jest.fn();
@@ -47,9 +52,11 @@ class MockHls {
 class MockMpegTsPlayer {
     readonly handlers = new Map<string, (...args: unknown[]) => void>();
     readonly attachMediaElement = jest.fn();
-    readonly on = jest.fn((event: string, handler: (...args: unknown[]) => void) => {
-        this.handlers.set(event, handler);
-    });
+    readonly on = jest.fn(
+        (event: string, handler: (...args: unknown[]) => void) => {
+            this.handlers.set(event, handler);
+        }
+    );
     readonly load = jest.fn();
     readonly play = jest.fn();
     readonly pause = jest.fn();
@@ -203,6 +210,20 @@ describe('ArtPlayerComponent', () => {
         expect(artPlayerInstances[0].options['isLive']).toBe(true);
     });
 
+    it('applies volume input changes without recreating the player', () => {
+        createComponent({
+            url: 'https://example.com/live/channel.m3u8',
+            name: 'HLS Live',
+        });
+        const player = artPlayerInstances[0];
+
+        fixture.componentRef.setInput('volume', 0.37);
+        fixture.detectChanges();
+
+        expect(player.volume).toBe(0.37);
+        expect(artPlayerInstances).toHaveLength(1);
+    });
+
     it('emits a playback issue when mpegts.js reports an unsupported codec', () => {
         createComponent({
             url: 'https://example.com/live/channel.ts',
@@ -217,9 +238,11 @@ describe('ArtPlayerComponent', () => {
             artPlayerInstances[0].video,
             'https://example.com/live/channel.ts'
         );
-        mpegTsInstances[0].handlers
-            .get('error')
-            ?.('mediaError', 'unsupported codec', {});
+        mpegTsInstances[0].handlers.get('error')?.(
+            'mediaError',
+            'unsupported codec',
+            {}
+        );
 
         expect(issues).toEqual([
             expect.objectContaining({
@@ -229,6 +252,97 @@ describe('ArtPlayerComponent', () => {
                 externalFallbackRecommended: true,
             }),
         ]);
+    });
+
+    it('emits playbackEnded exactly once for a native ended event and not during reload or destroy', () => {
+        const events: string[] = [];
+        createComponent({
+            url: 'https://example.com/series/s01e02.mp4',
+            name: 'Episode 2',
+        });
+        (
+            component as unknown as {
+                playbackEnded: {
+                    subscribe: (fn: () => void) => { unsubscribe: () => void };
+                };
+            }
+        ).playbackEnded.subscribe(() => events.push('ended'));
+
+        artPlayerInstances[0].video.dispatchEvent(new Event('ended'));
+        fixture.componentRef.setInput('channel', {
+            url: 'https://example.com/series/s01e03.mp4',
+            name: 'Episode 3',
+        });
+        fixture.detectChanges();
+        fixture.destroy();
+
+        expect(events).toEqual(['ended']);
+    });
+
+    it('hides series navigation controls when series navigation is absent', () => {
+        createComponent({
+            url: 'https://example.com/movie.mp4',
+            name: 'Movie',
+        });
+
+        expect(
+            fixture.debugElement.query(
+                By.css('[data-test-id="series-playback-previous-episode"]')
+            )
+        ).toBeNull();
+        expect(
+            fixture.debugElement.query(
+                By.css('[data-test-id="series-playback-next-episode"]')
+            )
+        ).toBeNull();
+    });
+
+    it('renders series navigation controls with boundary disabled state', () => {
+        const events: string[] = [];
+        createComponent({
+            url: 'https://example.com/series/s01e10.mp4',
+            name: 'Episode 10',
+        });
+        fixture.componentRef.setInput('seriesNavigation', {
+            canPrevious: true,
+            canNext: false,
+            autoplayEnabled: true,
+        });
+        (
+            component as unknown as {
+                previousEpisodeRequested: {
+                    subscribe: (fn: () => void) => { unsubscribe: () => void };
+                };
+                nextEpisodeRequested: {
+                    subscribe: (fn: () => void) => { unsubscribe: () => void };
+                };
+            }
+        ).previousEpisodeRequested.subscribe(() => events.push('previous'));
+        (
+            component as unknown as {
+                nextEpisodeRequested: {
+                    subscribe: (fn: () => void) => { unsubscribe: () => void };
+                };
+            }
+        ).nextEpisodeRequested.subscribe(() => events.push('next'));
+
+        fixture.detectChanges();
+
+        const previousButton = fixture.debugElement.query(
+            By.css('[data-test-id="series-playback-previous-episode"]')
+        );
+        const nextButton = fixture.debugElement.query(
+            By.css('[data-test-id="series-playback-next-episode"]')
+        );
+        expect(previousButton).not.toBeNull();
+        expect(previousButton.nativeElement.disabled).toBe(false);
+        expect(nextButton).not.toBeNull();
+        expect(nextButton.nativeElement.disabled).toBe(true);
+
+        previousButton.nativeElement.click();
+        nextButton.nativeElement.click();
+
+        expect(events).toEqual(['previous']);
     });
 
     function createComponent(channel: Pick<Channel, 'url' | 'name'>): void {

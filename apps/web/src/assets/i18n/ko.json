@@ -155,7 +155,12 @@
             "ERROR_FETCH_FAILED": "재생목록을 가져오지 못했습니다. URL을 확인하고 다시 시도해 주세요.",
             "ERROR_403": "접근 거부됨 (403): 서버가 요청을 거부했습니다. URL에 인증이 필요하거나 재생목록이 제한되어 있을 수 있습니다.",
             "ERROR_404": "재생목록을 찾을 수 없습니다 (404): URL이 유효한 재생목록을 가리키지 않습니다. URL을 확인해 주세요.",
-            "ERROR_401": "권한 없음 (401): 이 재생목록에 접근하려면 인증이 필요합니다."
+            "ERROR_401": "권한 없음 (401): 이 재생목록에 접근하려면 인증이 필요합니다.",
+            "ERROR_INVALID_TLS": "Certificate for this playlist host is invalid.",
+            "ERROR_TLS_HOST_UNKNOWN": "Could not determine the playlist host. Please retry manually.",
+            "TRUST_TLS_HOST": "Trust host",
+            "TRUST_TLS_HOST_TITLE": "Trust invalid certificate?",
+            "TRUST_TLS_HOST_WARNING": "Only continue if you trust this playlist host. IPTVnator will allow invalid TLS certificates for this host, but other hosts still require valid certificates."
         },
         "TEXT_IMPORT": {
             "LABEL": "Insert m3u(8) playlist as text",
@@ -372,7 +377,24 @@
         "PORT_PATTERN": "숫자만 입력할 수 있습니다",
         "REMOVE_ALL_IN_PROGRESS": "Deleting playlist data…",
         "REMOVE_ALL_PROGRESS": "Deleting playlist data… {{current}} / {{total}}",
-        "PLAYLISTS_REMOVE_FAILED": "Could not delete playlists. Please try again."
+        "PLAYLISTS_REMOVE_FAILED": "Could not delete playlists. Please try again.",
+        "NAV_DASHBOARD": "Dashboard",
+        "DASHBOARD": "Dashboard",
+        "DASHBOARD_SUBTITLE": "Choose which dashboard rails are shown in the workspace.",
+        "DASHBOARD_HERO": "Hero banner",
+        "DASHBOARD_HERO_DESCRIPTION": "Show the large top banner for your most recent item.",
+        "DASHBOARD_RAIL_CONTINUE": "Continue Watching",
+        "DASHBOARD_RAIL_CONTINUE_DESCRIPTION": "Show recently watched movies and series as cover cards.",
+        "DASHBOARD_RAIL_LIVE_FAVORITES": "Live now on your favorites",
+        "DASHBOARD_RAIL_LIVE_FAVORITES_DESCRIPTION": "Show favorite live channels with current EPG progress.",
+        "DASHBOARD_RAIL_RECENT_LIVE": "Recently watched live TV",
+        "DASHBOARD_RAIL_RECENT_LIVE_DESCRIPTION": "Show live channels you opened recently with current EPG progress.",
+        "DASHBOARD_RAIL_FAVORITE_VOD": "Favorite movies & series",
+        "DASHBOARD_RAIL_FAVORITE_VOD_DESCRIPTION": "Show favorited movies and series as cover cards.",
+        "DASHBOARD_RAIL_SOURCES": "Recently used sources",
+        "DASHBOARD_RAIL_SOURCES_DESCRIPTION": "Show shortcuts to your most recently used playlists and portals.",
+        "DASHBOARD_RAIL_XTREAM_ADDED": "Recently added on Xtream",
+        "DASHBOARD_RAIL_XTREAM_ADDED_DESCRIPTION": "Show the newest Xtream movies, series, and channels."
     },
     "THEMES": {
         "DARK_THEME": "어둡게",
@@ -569,6 +591,12 @@
         "TOTAL_PROGRAMS": "전체 프로그램",
         "UP_TO_DATE": "EPG가 최신 상태이며 동기화가 필요하지 않습니다",
         "RETRY": "다시 시도",
+        "ALLOW_PRIVATE_SOURCE": "Allow source",
+        "ALLOW_PRIVATE_SOURCE_TITLE": "Allow private-network EPG source?",
+        "ALLOW_PRIVATE_SOURCE_WARNING": "Only allow this if you trust the EPG source. IPTVnator will let this exact EPG URL connect to private or local network addresses.",
+        "TRUST_TLS_HOST": "Trust host",
+        "TRUST_TLS_HOST_TITLE": "Trust invalid certificate?",
+        "TRUST_TLS_HOST_WARNING": "Only continue if you trust this host. IPTVnator will allow invalid TLS certificates for this host, but other hosts still require valid certificates.",
         "CURRENT_PROGRAM": "Current program",
         "COLLAPSE_PANEL": "Collapse EPG panel",
         "EXPAND_PANEL": "Expand EPG panel"
@@ -879,7 +907,9 @@
             "TYPE_MOVIE": "영화",
             "TYPE_SERIES": "시리즈",
             "SEASON_EPISODE_BADGE": "시즌{{season}} {{episode}}화",
-            "NOT_YET_SYNCED": "아직 동기화되지 않음"
+            "NOT_YET_SYNCED": "아직 동기화되지 않음",
+            "RECENTLY_WATCHED_LIVE_TV": "Recently watched live TV",
+            "FAVORITE_MOVIES_AND_SERIES": "Favorite movies & series"
         },
         "SHELL": {
             "BRAND_ALT": "IPTVnator",

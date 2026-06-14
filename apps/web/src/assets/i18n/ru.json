@@ -155,7 +155,12 @@
             "ERROR_FETCH_FAILED": "Не удалось получить плейлист. Проверьте URL и попробуйте снова.",
             "ERROR_403": "Доступ запрещён (403): сервер отклонил запрос. Возможно, URL требует аутентификации или плейлист ограничен.",
             "ERROR_404": "Плейлист не найден (404): URL не указывает на действительный плейлист. Проверьте URL.",
-            "ERROR_401": "Не авторизовано (401): для доступа к этому плейлисту требуется аутентификация."
+            "ERROR_401": "Не авторизовано (401): для доступа к этому плейлисту требуется аутентификация.",
+            "ERROR_INVALID_TLS": "Certificate for this playlist host is invalid.",
+            "ERROR_TLS_HOST_UNKNOWN": "Could not determine the playlist host. Please retry manually.",
+            "TRUST_TLS_HOST": "Trust host",
+            "TRUST_TLS_HOST_TITLE": "Trust invalid certificate?",
+            "TRUST_TLS_HOST_WARNING": "Only continue if you trust this playlist host. IPTVnator will allow invalid TLS certificates for this host, but other hosts still require valid certificates."
         },
         "TEXT_IMPORT": {
             "LABEL": "Вставьте плейлист формата m3u(8) в данное поле",
@@ -372,7 +377,24 @@
         "PORT_PATTERN": "Разрешены только цифры",
         "REMOVE_ALL_IN_PROGRESS": "Deleting playlist data…",
         "REMOVE_ALL_PROGRESS": "Deleting playlist data… {{current}} / {{total}}",
-        "PLAYLISTS_REMOVE_FAILED": "Could not delete playlists. Please try again."
+        "PLAYLISTS_REMOVE_FAILED": "Could not delete playlists. Please try again.",
+        "NAV_DASHBOARD": "Панель",
+        "DASHBOARD": "Панель",
+        "DASHBOARD_SUBTITLE": "Выберите, какие секции отображаются на панели рабочего пространства.",
+        "DASHBOARD_HERO": "Верхний баннер",
+        "DASHBOARD_HERO_DESCRIPTION": "Показывать большой верхний баннер для последнего элемента.",
+        "DASHBOARD_RAIL_CONTINUE": "Продолжить просмотр",
+        "DASHBOARD_RAIL_CONTINUE_DESCRIPTION": "Показывать недавно просмотренные фильмы и сериалы в виде обложек.",
+        "DASHBOARD_RAIL_LIVE_FAVORITES": "Сейчас в эфире на избранных каналах",
+        "DASHBOARD_RAIL_LIVE_FAVORITES_DESCRIPTION": "Показывать избранные live-каналы с текущим прогрессом EPG.",
+        "DASHBOARD_RAIL_RECENT_LIVE": "Недавно просмотренное прямое ТВ",
+        "DASHBOARD_RAIL_RECENT_LIVE_DESCRIPTION": "Показывать live-каналы, которые вы недавно открывали, с текущим прогрессом EPG.",
+        "DASHBOARD_RAIL_FAVORITE_VOD": "Избранные фильмы и сериалы",
+        "DASHBOARD_RAIL_FAVORITE_VOD_DESCRIPTION": "Показывать избранные фильмы и сериалы в виде обложек.",
+        "DASHBOARD_RAIL_SOURCES": "Недавно использованные источники",
+        "DASHBOARD_RAIL_SOURCES_DESCRIPTION": "Показывать быстрый доступ к недавно использованным плейлистам и порталам.",
+        "DASHBOARD_RAIL_XTREAM_ADDED": "Недавно добавленное на Xtream",
+        "DASHBOARD_RAIL_XTREAM_ADDED_DESCRIPTION": "Показывать новые фильмы, сериалы и каналы Xtream."
     },
     "THEMES": {
         "DARK_THEME": "Тёмная",
@@ -569,6 +591,12 @@
         "TOTAL_PROGRAMS": "Всего программ",
         "UP_TO_DATE": "EPG актуален, синхронизация не требуется",
         "RETRY": "Повторить",
+        "ALLOW_PRIVATE_SOURCE": "Allow source",
+        "ALLOW_PRIVATE_SOURCE_TITLE": "Allow private-network EPG source?",
+        "ALLOW_PRIVATE_SOURCE_WARNING": "Only allow this if you trust the EPG source. IPTVnator will let this exact EPG URL connect to private or local network addresses.",
+        "TRUST_TLS_HOST": "Trust host",
+        "TRUST_TLS_HOST_TITLE": "Trust invalid certificate?",
+        "TRUST_TLS_HOST_WARNING": "Only continue if you trust this host. IPTVnator will allow invalid TLS certificates for this host, but other hosts still require valid certificates.",
         "CURRENT_PROGRAM": "Current program",
         "COLLAPSE_PANEL": "Collapse EPG panel",
         "EXPAND_PANEL": "Expand EPG panel"
@@ -879,7 +907,9 @@
             "TYPE_MOVIE": "Фильм",
             "TYPE_SERIES": "Сериал",
             "SEASON_EPISODE_BADGE": "С{{season}}·Э{{episode}}",
-            "NOT_YET_SYNCED": "Еще не синхронизировано"
+            "NOT_YET_SYNCED": "Еще не синхронизировано",
+            "RECENTLY_WATCHED_LIVE_TV": "Недавно просмотренное прямое ТВ",
+            "FAVORITE_MOVIES_AND_SERIES": "Избранные фильмы и сериалы"
         },
         "SHELL": {
             "BRAND_ALT": "IPTVnator",

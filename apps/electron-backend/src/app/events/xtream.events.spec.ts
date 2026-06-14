@@ -18,9 +18,11 @@ function createDeferred<T>() {
 
 jest.mock('electron', () => ({
     ipcMain: {
-        handle: jest.fn((channel: string, handler: (...args: unknown[]) => unknown) => {
-            registeredHandlers.set(channel, handler);
-        }),
+        handle: jest.fn(
+            (channel: string, handler: (...args: unknown[]) => unknown) => {
+                registeredHandlers.set(channel, handler);
+            }
+        ),
     },
 }));
 
@@ -50,10 +52,47 @@ describe('XtreamEvents session cancellation', () => {
         consoleErrorSpy.mockRestore();
     });
 
+    it('normalizes full Xtream API URLs before appending player_api.php', async () => {
+        const requestHandler = registeredHandlers.get('XTREAM_REQUEST');
+        expect(requestHandler).toBeDefined();
+
+        axiosMock.mockResolvedValue({
+            status: 200,
+            data: { ok: true },
+            headers: {},
+        });
+
+        await requestHandler?.(
+            {},
+            {
+                url: 'https://example.com/base/player_api.php?username=old&password=old',
+                params: {
+                    action: 'get_account_info',
+                    password: ' pass ',
+                    username: ' user ',
+                },
+                suppressErrorLog: true,
+            }
+        );
+
+        const requestedUrl = new URL(axiosMock.mock.calls[0][0].url);
+        expect(`${requestedUrl.origin}${requestedUrl.pathname}`).toBe(
+            'https://example.com/base/player_api.php'
+        );
+        expect(requestedUrl.searchParams.get('action')).toBe(
+            'get_account_info'
+        );
+        expect(requestedUrl.searchParams.get('password')).toBe('pass');
+        expect(requestedUrl.searchParams.get('username')).toBe('user');
+    });
+
     it('aborts requests that were registered with only a session id', async () => {
         const requestHandler = registeredHandlers.get('XTREAM_REQUEST');
         const cancelHandler = registeredHandlers.get(XTREAM_CANCEL_SESSION);
-        const pendingRequest = createDeferred<{ status: number; data: unknown }>();
+        const pendingRequest = createDeferred<{
+            status: number;
+            data: unknown;
+        }>();
         const cancelError = Object.assign(new Error('cancelled'), {
             code: 'ERR_CANCELED',
         });
@@ -70,23 +109,27 @@ describe('XtreamEvents session cancellation', () => {
             (error: unknown) => error === cancelError
         );
 
-        const requestPromise = requestHandler?.({}, {
-            url: 'http://localhost:3211',
-            params: {
-                action: 'get_live_categories',
-                password: 'secret',
-                username: 'user1',
-            },
-            sessionId: 'session-1',
-            suppressErrorLog: true,
-        }) as Promise<unknown>;
+        const requestPromise = requestHandler?.(
+            {},
+            {
+                url: 'http://localhost:3211',
+                params: {
+                    action: 'get_live_categories',
+                    password: 'secret',
+                    username: 'user1',
+                },
+                sessionId: 'session-1',
+                suppressErrorLog: true,
+            }
+        ) as Promise<unknown>;
 
+        await Promise.resolve();
         expect(abortSignal?.aborted).toBe(false);
 
-        const cancelResult = (await cancelHandler?.(
-            {},
-            'session-1'
-        )) as { success: boolean; cancelled: number };
+        const cancelResult = (await cancelHandler?.({}, 'session-1')) as {
+            success: boolean;
+            cancelled: number;
+        };
 
         expect(cancelResult).toEqual({ success: true, cancelled: 1 });
         expect(abortSignal?.aborted).toBe(true);
@@ -102,8 +145,14 @@ describe('XtreamEvents session cancellation', () => {
     it('counts every matching in-flight request for the same session', async () => {
         const requestHandler = registeredHandlers.get('XTREAM_REQUEST');
         const cancelHandler = registeredHandlers.get(XTREAM_CANCEL_SESSION);
-        const firstRequest = createDeferred<{ status: number; data: unknown }>();
-        const secondRequest = createDeferred<{ status: number; data: unknown }>();
+        const firstRequest = createDeferred<{
+            status: number;
+            data: unknown;
+        }>();
+        const secondRequest = createDeferred<{
+            status: number;
+            data: unknown;
+        }>();
         const cancelError = Object.assign(new Error('cancelled'), {
             code: 'ERR_CANCELED',
         });
@@ -129,31 +178,38 @@ describe('XtreamEvents session cancellation', () => {
             (error: unknown) => error === cancelError
         );
 
-        const firstPromise = requestHandler?.({}, {
-            url: 'http://localhost:3211',
-            params: {
-                action: 'get_live_categories',
-                password: 'secret',
-                username: 'user1',
-            },
-            sessionId: 'session-2',
-            suppressErrorLog: true,
-        }) as Promise<unknown>;
-        const secondPromise = requestHandler?.({}, {
-            url: 'http://localhost:3211',
-            params: {
-                action: 'get_vod_streams',
-                password: 'secret',
-                username: 'user1',
-            },
-            sessionId: 'session-2',
-            suppressErrorLog: true,
-        }) as Promise<unknown>;
-
-        const cancelResult = (await cancelHandler?.(
+        const firstPromise = requestHandler?.(
             {},
-            'session-2'
-        )) as { success: boolean; cancelled: number };
+            {
+                url: 'http://localhost:3211',
+                params: {
+                    action: 'get_live_categories',
+                    password: 'secret',
+                    username: 'user1',
+                },
+                sessionId: 'session-2',
+                suppressErrorLog: true,
+            }
+        ) as Promise<unknown>;
+        const secondPromise = requestHandler?.(
+            {},
+            {
+                url: 'http://localhost:3211',
+                params: {
+                    action: 'get_vod_streams',
+                    password: 'secret',
+                    username: 'user1',
+                },
+                sessionId: 'session-2',
+                suppressErrorLog: true,
+            }
+        ) as Promise<unknown>;
+
+        await Promise.resolve();
+        const cancelResult = (await cancelHandler?.({}, 'session-2')) as {
+            success: boolean;
+            cancelled: number;
+        };
 
         expect(cancelResult).toEqual({ success: true, cancelled: 2 });
         expect(abortSignals).toHaveLength(2);
@@ -162,7 +218,11 @@ describe('XtreamEvents session cancellation', () => {
         firstRequest.reject(cancelError);
         secondRequest.reject(cancelError);
 
-        await expect(firstPromise).rejects.toMatchObject({ name: 'AbortError' });
-        await expect(secondPromise).rejects.toMatchObject({ name: 'AbortError' });
+        await expect(firstPromise).rejects.toMatchObject({
+            name: 'AbortError',
+        });
+        await expect(secondPromise).rejects.toMatchObject({
+            name: 'AbortError',
+        });
     });
 });

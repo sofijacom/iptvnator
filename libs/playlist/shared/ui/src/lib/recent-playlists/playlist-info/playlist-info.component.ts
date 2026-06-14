@@ -10,7 +10,11 @@ import {
 } from '@angular/forms';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import {
+    MAT_DIALOG_DATA,
+    MatDialogModule,
+    MatDialogRef,
+} from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -24,7 +28,11 @@ import {
     PlaylistsService,
     RuntimeCapabilitiesService,
 } from '@iptvnator/services';
-import { Playlist, PlaylistMeta } from '@iptvnator/shared/interfaces';
+import {
+    normalizeXtreamServerUrl,
+    Playlist,
+    PlaylistMeta,
+} from '@iptvnator/shared/interfaces';
 
 type DesktopFileSaveBridge = Pick<
     typeof window.electron,
@@ -90,6 +98,9 @@ export class PlaylistInfoComponent {
     private snackBar = inject(MatSnackBar);
     private translate = inject(TranslateService);
     private runtime = inject(RuntimeCapabilitiesService);
+    private dialogRef = inject(MatDialogRef<PlaylistInfoComponent>, {
+        optional: true,
+    });
     public playlistData = inject<Playlist & { id: string }>(MAT_DIALOG_DATA);
 
     get isDesktop(): boolean {
@@ -153,19 +164,23 @@ export class PlaylistInfoComponent {
 
     async saveChanges(playlist: PlaylistMeta): Promise<void> {
         try {
+            const normalizedPlaylist =
+                this.normalizeXtreamPlaylistMeta(playlist);
             const isXtream =
                 this.playlist &&
                 this.playlist.username &&
                 this.playlist.password &&
                 this.playlist.serverUrl;
 
-            if (isXtream) {
-                await this.updateXtreamPlaylist(playlist);
+            if (isXtream && this.runtime.supportsXtreamSqliteDataSource) {
+                await this.updateXtreamPlaylist(normalizedPlaylist);
             }
 
             // Dispatch store action to update UI
             this.store.dispatch(
-                PlaylistActions.updatePlaylistMeta({ playlist })
+                PlaylistActions.updatePlaylistMeta({
+                    playlist: normalizedPlaylist,
+                })
             );
 
             this.snackBar.open(
@@ -175,6 +190,7 @@ export class PlaylistInfoComponent {
                 this.translate.instant('CLOSE'),
                 { duration: 3000 }
             );
+            this.dialogRef?.close();
         } catch (error) {
             console.error('Error updating playlist:', error);
             this.snackBar.open(
@@ -185,6 +201,19 @@ export class PlaylistInfoComponent {
                 }
             );
         }
+    }
+
+    private normalizeXtreamPlaylistMeta(playlist: PlaylistMeta): PlaylistMeta {
+        if (!playlist.serverUrl || !playlist.username || !playlist.password) {
+            return playlist;
+        }
+
+        return {
+            ...playlist,
+            password: playlist.password.trim(),
+            serverUrl: normalizeXtreamServerUrl(playlist.serverUrl),
+            username: playlist.username.trim(),
+        };
     }
 
     async updateXtreamPlaylist(playlist: PlaylistMeta) {
@@ -215,8 +244,7 @@ export class PlaylistInfoComponent {
         );
 
         if (this.runtime.supportsDesktopFileSave) {
-            const desktopFileBridge =
-                window.electron as DesktopFileSaveBridge;
+            const desktopFileBridge = window.electron as DesktopFileSaveBridge;
 
             try {
                 const savePath = await desktopFileBridge.saveFileDialog(
@@ -269,10 +297,7 @@ export class PlaylistInfoComponent {
             'data:text/plain;charset=utf-8,' +
                 encodeURIComponent(playlistAsString)
         );
-        element.setAttribute(
-            'download',
-            this.playlist.title || 'exported.m3u'
-        );
+        element.setAttribute('download', this.playlist.title || 'exported.m3u');
         element.style.display = 'none';
         document.body.appendChild(element);
         element.click();

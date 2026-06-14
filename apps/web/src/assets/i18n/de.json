@@ -155,7 +155,12 @@
             "ERROR_FETCH_FAILED": "Playlist konnte nicht abgerufen werden. Bitte überprüfen Sie die URL und versuchen Sie es erneut.",
             "ERROR_403": "Zugriff verweigert (403): Der Server hat die Anfrage abgelehnt. Die URL erfordert möglicherweise eine Authentifizierung oder die Playlist ist eingeschränkt.",
             "ERROR_404": "Playlist nicht gefunden (404): Die URL verweist nicht auf eine gültige Playlist. Bitte überprüfen Sie die URL.",
-            "ERROR_401": "Nicht autorisiert (401): Für den Zugriff auf diese Playlist ist eine Authentifizierung erforderlich."
+            "ERROR_401": "Nicht autorisiert (401): Für den Zugriff auf diese Playlist ist eine Authentifizierung erforderlich.",
+            "ERROR_INVALID_TLS": "Certificate for this playlist host is invalid.",
+            "ERROR_TLS_HOST_UNKNOWN": "Could not determine the playlist host. Please retry manually.",
+            "TRUST_TLS_HOST": "Trust host",
+            "TRUST_TLS_HOST_TITLE": "Trust invalid certificate?",
+            "TRUST_TLS_HOST_WARNING": "Only continue if you trust this playlist host. IPTVnator will allow invalid TLS certificates for this host, but other hosts still require valid certificates."
         },
         "TEXT_IMPORT": {
             "LABEL": "Füge m3u(8)-Wiedergabeliste hier als Text ein",
@@ -372,7 +377,24 @@
         "PORT_PATTERN": "Nur Ziffern sind erlaubt",
         "REMOVE_ALL_IN_PROGRESS": "Deleting playlist data…",
         "REMOVE_ALL_PROGRESS": "Deleting playlist data… {{current}} / {{total}}",
-        "PLAYLISTS_REMOVE_FAILED": "Could not delete playlists. Please try again."
+        "PLAYLISTS_REMOVE_FAILED": "Could not delete playlists. Please try again.",
+        "NAV_DASHBOARD": "Dashboard",
+        "DASHBOARD": "Dashboard",
+        "DASHBOARD_SUBTITLE": "Wählen Sie, welche Dashboard-Rails im Workspace angezeigt werden.",
+        "DASHBOARD_HERO": "Hero-Banner",
+        "DASHBOARD_HERO_DESCRIPTION": "Zeigt den großen oberen Banner für das zuletzt verwendete Element.",
+        "DASHBOARD_RAIL_CONTINUE": "Weiter schauen",
+        "DASHBOARD_RAIL_CONTINUE_DESCRIPTION": "Zeigt zuletzt angesehene Filme und Serien als Cover-Karten.",
+        "DASHBOARD_RAIL_LIVE_FAVORITES": "Jetzt live auf Ihren Favoriten",
+        "DASHBOARD_RAIL_LIVE_FAVORITES_DESCRIPTION": "Zeigt favorisierte Live-Kanäle mit aktuellem EPG-Fortschritt.",
+        "DASHBOARD_RAIL_RECENT_LIVE": "Zuletzt angesehenes Live-TV",
+        "DASHBOARD_RAIL_RECENT_LIVE_DESCRIPTION": "Zeigt Live-Kanäle, die Sie kürzlich geöffnet haben, mit aktuellem EPG-Fortschritt.",
+        "DASHBOARD_RAIL_FAVORITE_VOD": "Favorisierte Filme & Serien",
+        "DASHBOARD_RAIL_FAVORITE_VOD_DESCRIPTION": "Zeigt favorisierte Filme und Serien als Cover-Karten.",
+        "DASHBOARD_RAIL_SOURCES": "Zuletzt verwendete Quellen",
+        "DASHBOARD_RAIL_SOURCES_DESCRIPTION": "Zeigt Schnellzugriffe auf zuletzt verwendete Playlists und Portale.",
+        "DASHBOARD_RAIL_XTREAM_ADDED": "Neu auf Xtream",
+        "DASHBOARD_RAIL_XTREAM_ADDED_DESCRIPTION": "Zeigt die neuesten Xtream-Filme, Serien und Kanäle."
     },
     "THEMES": {
         "DARK_THEME": "Dunkel",
@@ -569,6 +591,12 @@
         "TOTAL_PROGRAMS": "Programme insgesamt",
         "UP_TO_DATE": "EPG ist aktuell, keine Synchronisation nötig",
         "RETRY": "Erneut versuchen",
+        "ALLOW_PRIVATE_SOURCE": "Allow source",
+        "ALLOW_PRIVATE_SOURCE_TITLE": "Allow private-network EPG source?",
+        "ALLOW_PRIVATE_SOURCE_WARNING": "Only allow this if you trust the EPG source. IPTVnator will let this exact EPG URL connect to private or local network addresses.",
+        "TRUST_TLS_HOST": "Trust host",
+        "TRUST_TLS_HOST_TITLE": "Trust invalid certificate?",
+        "TRUST_TLS_HOST_WARNING": "Only continue if you trust this host. IPTVnator will allow invalid TLS certificates for this host, but other hosts still require valid certificates.",
         "CURRENT_PROGRAM": "Current program",
         "COLLAPSE_PANEL": "Collapse EPG panel",
         "EXPAND_PANEL": "Expand EPG panel"
@@ -879,7 +907,9 @@
             "TYPE_MOVIE": "Film",
             "TYPE_SERIES": "Serie",
             "SEASON_EPISODE_BADGE": "St{{season}} · F{{episode}}",
-            "NOT_YET_SYNCED": "Noch nicht synchronisiert"
+            "NOT_YET_SYNCED": "Noch nicht synchronisiert",
+            "RECENTLY_WATCHED_LIVE_TV": "Zuletzt angesehenes Live-TV",
+            "FAVORITE_MOVIES_AND_SERIES": "Favorisierte Filme & Serien"
         },
         "SHELL": {
             "BRAND_ALT": "IPTVnator",

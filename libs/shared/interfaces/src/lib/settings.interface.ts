@@ -21,6 +21,51 @@ export enum StartupBehavior {
 
 export type CoverSize = 'small' | 'medium' | 'large';
 
+export interface DashboardRailsSettings {
+    hero: boolean;
+    continueWatching: boolean;
+    liveFavorites: boolean;
+    recentlyWatchedLive: boolean;
+    favoriteMoviesAndSeries: boolean;
+    recentSources: boolean;
+    xtreamRecentlyAdded: boolean;
+}
+
+export const DEFAULT_DASHBOARD_RAILS_SETTINGS: DashboardRailsSettings = {
+    hero: true,
+    continueWatching: true,
+    liveFavorites: true,
+    recentlyWatchedLive: true,
+    favoriteMoviesAndSeries: true,
+    recentSources: true,
+    xtreamRecentlyAdded: true,
+};
+
+export type DashboardRailsSettingsInput = Partial<
+    Record<keyof DashboardRailsSettings, boolean | null | undefined>
+>;
+
+export function normalizeDashboardRailsSettings(
+    settings?: DashboardRailsSettingsInput | null
+): DashboardRailsSettings {
+    const normalized = { ...DEFAULT_DASHBOARD_RAILS_SETTINGS };
+
+    if (!settings) {
+        return normalized;
+    }
+
+    const keys = Object.keys(
+        DEFAULT_DASHBOARD_RAILS_SETTINGS
+    ) as (keyof DashboardRailsSettings)[];
+    for (const key of keys) {
+        if (typeof settings[key] === 'boolean') {
+            normalized[key] = settings[key];
+        }
+    }
+
+    return normalized;
+}
+
 /**
  * Describes all available settings options of the application
  */
@@ -58,6 +103,8 @@ export interface Settings {
     recordingFolder?: string;
     /** Cover/poster sizing preset applied across grids and rails */
     coverSize?: CoverSize;
+    /** Per-rail dashboard visibility preferences. Missing keys default on. */
+    dashboardRails?: DashboardRailsSettings;
     /**
      * When true, the locally-parsed XMLTV programs (loaded from `epgUrl`)
      * take precedence over the Xtream provider's EPG for live TV channels.
@@ -66,4 +113,16 @@ export interface Settings {
      * Only meaningful for Xtream playlists in Electron.
      */
     preferUploadedEpgOverXtream?: boolean;
+    /**
+     * Exact EPG source URLs the user has allowed to resolve to private/LAN
+     * network addresses. Kept source-scoped instead of disabling SSRF
+     * protection globally.
+     */
+    trustedPrivateNetworkEpgUrls?: string[];
+    /**
+     * Lowercase hostnames whose invalid TLS certificates the user has chosen
+     * to trust. This is host-scoped and does not disable TLS validation for
+     * unrelated playlist or EPG hosts.
+     */
+    trustedInsecureTlsHosts?: string[];
 }

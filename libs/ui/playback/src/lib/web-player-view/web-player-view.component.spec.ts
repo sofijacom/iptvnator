@@ -1,5 +1,9 @@
 import { Component, input, output } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+    ComponentFixture,
+    DeferBlockBehavior,
+    TestBed,
+} from '@angular/core/testing';
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -33,8 +37,12 @@ class StubVjsPlayerComponent {
     readonly options = input<unknown>();
     readonly volume = input(1);
     readonly startTime = input(0);
+    readonly seriesNavigation = input<unknown>(null);
     readonly timeUpdate = output<{ currentTime: number; duration: number }>();
     readonly playbackIssue = output<PlaybackDiagnostic | null>();
+    readonly playbackEnded = output<void>();
+    readonly previousEpisodeRequested = output<void>();
+    readonly nextEpisodeRequested = output<void>();
 }
 
 @Component({
@@ -46,8 +54,12 @@ class StubHtmlVideoPlayerComponent {
     readonly volume = input(1);
     readonly showCaptions = input(false);
     readonly startTime = input(0);
+    readonly seriesNavigation = input<unknown>(null);
     readonly timeUpdate = output<{ currentTime: number; duration: number }>();
     readonly playbackIssue = output<PlaybackDiagnostic | null>();
+    readonly playbackEnded = output<void>();
+    readonly previousEpisodeRequested = output<void>();
+    readonly nextEpisodeRequested = output<void>();
 }
 
 @Component({
@@ -59,8 +71,12 @@ class StubArtPlayerComponent {
     readonly volume = input(1);
     readonly showCaptions = input(false);
     readonly startTime = input(0);
+    readonly seriesNavigation = input<unknown>(null);
     readonly timeUpdate = output<{ currentTime: number; duration: number }>();
     readonly playbackIssue = output<PlaybackDiagnostic | null>();
+    readonly playbackEnded = output<void>();
+    readonly previousEpisodeRequested = output<void>();
+    readonly nextEpisodeRequested = output<void>();
 }
 
 @Component({
@@ -95,6 +111,8 @@ describe('WebPlayerViewComponent', () => {
         runtimeCapabilities = { supportsManagedExternalPlayers: false };
 
         await TestBed.configureTestingModule({
+            // @defer blocks render their main content synchronously in tests.
+            deferBlockBehavior: DeferBlockBehavior.Playthrough,
             imports: [WebPlayerViewComponent, TranslateModule.forRoot()],
             providers: [
                 { provide: StorageMap, useValue: storageMap },
@@ -208,7 +226,7 @@ describe('WebPlayerViewComponent', () => {
         ]);
     });
 
-    it('marks portal VOD playback as non-live for Video.js MPEG-TS playback', () => {
+    it('marks portal VOD playback as non-live for Video.js MPEG-TS playback', async () => {
         const streamUrl = 'https://example.com/movie/123.ts';
         fixture.componentRef.setInput('playback', {
             streamUrl,
@@ -220,6 +238,8 @@ describe('WebPlayerViewComponent', () => {
             },
         });
 
+        fixture.detectChanges();
+        await fixture.whenStable();
         fixture.detectChanges();
 
         const player = fixture.debugElement.query(
@@ -238,7 +258,7 @@ describe('WebPlayerViewComponent', () => {
         );
     });
 
-    it('preserves playback HTTP metadata for channel-based players', () => {
+    it('preserves playback HTTP metadata for channel-based players', async () => {
         const streamUrl = 'https://example.com/live/channel.m3u8';
         fixture.componentRef.setInput(
             'playerOverride',
@@ -258,6 +278,8 @@ describe('WebPlayerViewComponent', () => {
         });
 
         fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
 
         const player = fixture.debugElement.query(
             By.directive(StubHtmlVideoPlayerComponent)
@@ -275,7 +297,7 @@ describe('WebPlayerViewComponent', () => {
         );
     });
 
-    it('falls back to playback headers when explicit HTTP metadata is absent', () => {
+    it('falls back to playback headers when explicit HTTP metadata is absent', async () => {
         const streamUrl = 'https://example.com/live/channel.m3u8';
         fixture.componentRef.setInput(
             'playerOverride',
@@ -291,6 +313,8 @@ describe('WebPlayerViewComponent', () => {
             },
         });
 
+        fixture.detectChanges();
+        await fixture.whenStable();
         fixture.detectChanges();
 
         const player = fixture.debugElement.query(
@@ -332,6 +356,46 @@ describe('WebPlayerViewComponent', () => {
         expect(player.recordingFolder()).toBe('');
     });
 
+    it('suppresses browser diagnostics while embedded MPV is selected', () => {
+        const requests: unknown[] = [];
+        runtimeCapabilities.supportsManagedExternalPlayers = true;
+        fixture.componentRef.setInput(
+            'playerOverride',
+            VideoPlayer.EmbeddedMpv
+        );
+        component.externalFallbackRequested.subscribe((request) =>
+            requests.push(request)
+        );
+
+        fixture.detectChanges();
+        component.handlePlaybackIssue(createUnsupportedCodecDiagnostic());
+        fixture.detectChanges();
+        component.requestExternalFallback('mpv');
+
+        expect(component.playbackDiagnostic()).toBeNull();
+        expect(
+            fixture.debugElement.query(
+                By.directive(StubEmbeddedMpvPlayerComponent)
+            )
+        ).not.toBeNull();
+        expect(
+            fixture.debugElement.query(
+                By.css('[data-test-id="playback-diagnostic-banner"]')
+            )
+        ).toBeNull();
+        expect(
+            fixture.debugElement.query(
+                By.css('[data-test-id="playback-fallback-mpv"]')
+            )
+        ).toBeNull();
+        expect(
+            fixture.debugElement.query(
+                By.css('[data-test-id="playback-fallback-vlc"]')
+            )
+        ).toBeNull();
+        expect(requests).toEqual([]);
+    });
+
     it('passes series navigation to embedded MPV and forwards episode navigation events', () => {
         const events: string[] = [];
         const seriesNavigation = {
@@ -339,18 +403,25 @@ describe('WebPlayerViewComponent', () => {
             canNext: false,
             autoplayEnabled: true,
         };
-        fixture.componentRef.setInput('playerOverride', VideoPlayer.EmbeddedMpv);
+        fixture.componentRef.setInput(
+            'playerOverride',
+            VideoPlayer.EmbeddedMpv
+        );
         fixture.componentRef.setInput('seriesNavigation', seriesNavigation);
         (
             component as unknown as {
                 playbackEnded: { subscribe: (fn: () => void) => void };
-                previousEpisodeRequested: { subscribe: (fn: () => void) => void };
+                previousEpisodeRequested: {
+                    subscribe: (fn: () => void) => void;
+                };
                 nextEpisodeRequested: { subscribe: (fn: () => void) => void };
             }
         ).playbackEnded.subscribe(() => events.push('ended'));
         (
             component as unknown as {
-                previousEpisodeRequested: { subscribe: (fn: () => void) => void };
+                previousEpisodeRequested: {
+                    subscribe: (fn: () => void) => void;
+                };
             }
         ).previousEpisodeRequested.subscribe(() => events.push('previous'));
         (
@@ -372,6 +443,96 @@ describe('WebPlayerViewComponent', () => {
 
         expect(events).toEqual(['ended', 'previous', 'next']);
     });
+
+    it.each([
+        {
+            player: VideoPlayer.VideoJs,
+            directive: StubVjsPlayerComponent,
+        },
+        {
+            player: VideoPlayer.Html5Player,
+            directive: StubHtmlVideoPlayerComponent,
+        },
+        {
+            player: VideoPlayer.ArtPlayer,
+            directive: StubArtPlayerComponent,
+        },
+    ])(
+        'passes volume to $player inline player',
+        async ({ player, directive }) => {
+            fixture.componentRef.setInput('playerOverride', player);
+            fixture.componentRef.setInput('volume', 0.42);
+
+            fixture.detectChanges();
+            await fixture.whenStable();
+            fixture.detectChanges();
+
+            const playerElement = fixture.debugElement.query(
+                By.directive(directive)
+            );
+            expect(playerElement).not.toBeNull();
+
+            const playerInstance = playerElement.componentInstance as {
+                volume: () => number;
+            };
+            expect(playerInstance.volume()).toBe(0.42);
+        }
+    );
+
+    it.each([
+        {
+            player: VideoPlayer.VideoJs,
+            directive: StubVjsPlayerComponent,
+        },
+        {
+            player: VideoPlayer.Html5Player,
+            directive: StubHtmlVideoPlayerComponent,
+        },
+        {
+            player: VideoPlayer.ArtPlayer,
+            directive: StubArtPlayerComponent,
+        },
+    ])(
+        'passes series navigation to $player and forwards episode navigation events',
+        async ({ player: selectedPlayer, directive }) => {
+            const events: string[] = [];
+            const seriesNavigation = {
+                canPrevious: true,
+                canNext: false,
+                autoplayEnabled: true,
+            };
+            fixture.componentRef.setInput('playerOverride', selectedPlayer);
+            fixture.componentRef.setInput('seriesNavigation', seriesNavigation);
+            component.playbackEnded.subscribe(() => events.push('ended'));
+            component.previousEpisodeRequested.subscribe(() =>
+                events.push('previous')
+            );
+            component.nextEpisodeRequested.subscribe(() => events.push('next'));
+
+            fixture.detectChanges();
+            await fixture.whenStable();
+            fixture.detectChanges();
+
+            const playerElement = fixture.debugElement.query(
+                By.directive(directive)
+            );
+            expect(playerElement).not.toBeNull();
+
+            const player = playerElement.componentInstance as {
+                seriesNavigation: () => unknown;
+                playbackEnded: { emit: () => void };
+                previousEpisodeRequested: { emit: () => void };
+                nextEpisodeRequested: { emit: () => void };
+            };
+            expect(player.seriesNavigation()).toBe(seriesNavigation);
+
+            player.playbackEnded.emit();
+            player.previousEpisodeRequested.emit();
+            player.nextEpisodeRequested.emit();
+
+            expect(events).toEqual(['ended', 'previous', 'next']);
+        }
+    );
 
     it('uses the PWA browser access diagnostic description key outside desktop', () => {
         const issue = createBrowserAccessDiagnostic();
@@ -457,7 +618,9 @@ describe('WebPlayerViewComponent', () => {
         );
     });
 
-    it('clears playback diagnostics when retrying inline playback', () => {
+    it('clears playback diagnostics when retrying inline playback', async () => {
+        fixture.detectChanges();
+        await fixture.whenStable();
         fixture.detectChanges();
         const player = fixture.debugElement.query(
             By.directive(StubVjsPlayerComponent)

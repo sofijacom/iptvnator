@@ -1,4 +1,5 @@
 import { app, dialog, powerSaveBlocker } from 'electron';
+import { spawnSync } from 'child_process';
 import {
     closeSync,
     existsSync,
@@ -93,8 +94,10 @@ export class EmbeddedMpvNativeService {
     private addonLoadError: Error | null = null;
     private readonly sessions = new Map<string, EmbeddedMpvRuntimeSession>();
     private pollingTimer: NodeJS.Timeout | null = null;
+    private readonly pollFailuresLogged = new Set<string>();
     private powerBlockerId: number | null = null;
     private readonly loadAddonModule = createRequire(__filename);
+    private cachedLinuxMpvExecutableReason: string | null | undefined;
 
     private detectCapabilities(): EmbeddedMpvCapabilities {
         const addon = this.addon;
@@ -114,8 +117,7 @@ export class EmbeddedMpvNativeService {
             return {
                 supported: false,
                 platform: process.platform,
-                reason:
-                    'Embedded MPV is currently available on macOS, Windows, and Linux only.',
+                reason: 'Embedded MPV is currently available on macOS, Windows, and Linux only.',
             };
         }
 
@@ -123,8 +125,7 @@ export class EmbeddedMpvNativeService {
             return {
                 supported: false,
                 platform: process.platform,
-                reason:
-                    'Embedded MPV on Linux currently requires X11 or Xwayland. Native Wayland embedding is not supported yet.',
+                reason: 'Embedded MPV on Linux currently requires X11 or Xwayland. Native Wayland embedding is not supported yet.',
             };
         }
 
@@ -133,6 +134,16 @@ export class EmbeddedMpvNativeService {
                 supported: false,
                 platform: process.platform,
                 reason: `Embedded MPV is an experimental desktop player. Set ${EMBEDDED_MPV_EXPERIMENT_ENV}=1 to enable it for local development builds, or use a packaged build with the bundled runtime.`,
+            };
+        }
+
+        const missingLinuxMpvExecutableReason =
+            this.getMissingLinuxMpvExecutableReason();
+        if (missingLinuxMpvExecutableReason) {
+            return {
+                supported: false,
+                platform: process.platform,
+                reason: missingLinuxMpvExecutableReason,
             };
         }
 
@@ -465,6 +476,7 @@ export class EmbeddedMpvNativeService {
             addon.disposeSession(sessionId);
         } finally {
             this.sessions.delete(sessionId);
+            this.pollFailuresLogged.delete(sessionId);
             const payload: EmbeddedMpvSession = {
                 id: session.id,
                 title: session.title,
@@ -507,7 +519,24 @@ export class EmbeddedMpvNativeService {
 
         this.pollingTimer = setInterval(() => {
             [...this.sessions.keys()].forEach((sessionId) => {
-                this.refreshSession(sessionId);
+                // An addon-side throw must not escape the interval callback:
+                // it would surface as an uncaughtException in the main
+                // process every 500 ms while the timer keeps running. Log
+                // each session's first failure only — tracked per session so
+                // a healthy session in the same tick cannot reset the
+                // suppression for a failing one.
+                try {
+                    this.refreshSession(sessionId);
+                    this.pollFailuresLogged.delete(sessionId);
+                } catch (error) {
+                    if (!this.pollFailuresLogged.has(sessionId)) {
+                        this.pollFailuresLogged.add(sessionId);
+                        console.error(
+                            `[Embedded MPV] Polling session "${sessionId}" failed:`,
+                            error
+                        );
+                    }
+                }
             });
         }, 500);
     }
@@ -645,7 +674,14 @@ export class EmbeddedMpvNativeService {
             throw new Error('The Electron main window is not available.');
         }
 
-        return App.mainWindow.getNativeWindowHandle();
+        const windowHandle = App.mainWindow.getNativeWindowHandle();
+        if (this.isInvalidLinuxWaylandWindowHandle(windowHandle)) {
+            throw new Error(
+                'Embedded MPV on Linux requires Electron to run under X11 or Xwayland. Native Wayland embedding is not supported yet. Start IPTVnator with --ozone-platform=x11.'
+            );
+        }
+
+        return windowHandle;
     }
 
     private reserveRecordingTargetPath(
@@ -739,11 +775,58 @@ export class EmbeddedMpvNativeService {
     }
 
     private isUnsupportedLinuxDisplayServer(): boolean {
+        if (process.platform !== 'linux' || !process.env.WAYLAND_DISPLAY) {
+            return false;
+        }
+
+        return !process.env.DISPLAY || !this.isLinuxX11OzoneRequested();
+    }
+
+    private isLinuxX11OzoneRequested(): boolean {
         return (
-            process.platform === 'linux' &&
-            Boolean(process.env.WAYLAND_DISPLAY) &&
-            !process.env.DISPLAY
+            app.commandLine.getSwitchValue('ozone-platform').toLowerCase() ===
+            'x11'
         );
+    }
+
+    private getMissingLinuxMpvExecutableReason(): string | null {
+        if (process.platform !== 'linux') {
+            return null;
+        }
+
+        if (this.cachedLinuxMpvExecutableReason !== undefined) {
+            return this.cachedLinuxMpvExecutableReason;
+        }
+
+        const result = spawnSync('mpv', ['--version'], {
+            stdio: 'ignore',
+            timeout: 3000,
+        });
+        this.cachedLinuxMpvExecutableReason =
+            result.status === 0
+                ? null
+                : 'Embedded MPV on Linux requires the mpv executable on PATH. Install the mpv package for your distribution and restart IPTVnator.';
+        return this.cachedLinuxMpvExecutableReason;
+    }
+
+    private isInvalidLinuxWaylandWindowHandle(windowHandle: Buffer): boolean {
+        if (
+            process.platform !== 'linux' ||
+            !process.env.WAYLAND_DISPLAY ||
+            !process.env.DISPLAY
+        ) {
+            return false;
+        }
+
+        if (windowHandle.length === 0) {
+            return false;
+        }
+
+        const windowHandleValue =
+            windowHandle.length >= 4
+                ? windowHandle.readUInt32LE(0)
+                : windowHandle.readUIntLE(0, windowHandle.length);
+        return windowHandleValue <= 1;
     }
 
     private getAddon(): NativeEmbeddedMpvAddon {
@@ -861,6 +944,10 @@ export class EmbeddedMpvNativeService {
         const nativeDir = path.dirname(addonPath);
         const runtimeCandidates = this.getRuntimeLibraryCandidates(nativeDir);
 
+        if (runtimeCandidates.length === 0) {
+            return null;
+        }
+
         if (!runtimeCandidates.some((candidate) => existsSync(candidate))) {
             return [
                 'Embedded MPV runtime is incomplete. Missing one of:',
@@ -886,11 +973,7 @@ export class EmbeddedMpvNativeService {
                     path.join(nativeDir, 'mpv.dll'),
                 ];
             case 'linux':
-                return [
-                    path.join(nativeDir, 'lib', 'libmpv.so.2'),
-                    path.join(nativeDir, 'lib', 'libmpv.so.1'),
-                    path.join(nativeDir, 'lib', 'libmpv.so'),
-                ];
+                return [];
             default:
                 return [];
         }

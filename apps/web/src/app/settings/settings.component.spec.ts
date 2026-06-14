@@ -18,7 +18,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
-import { EpgRuntimeBridgeService, EpgService } from '@iptvnator/epg/data-access';
+import {
+    EpgRuntimeBridgeService,
+    EpgService,
+} from '@iptvnator/epg/data-access';
 import { Store } from '@ngrx/store';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -55,6 +58,16 @@ import { SettingsStore } from '../services/settings-store.service';
 import { SettingsService } from '../services/settings.service';
 import { SettingsSectionScrollDirective } from './settings-section-scroll.directive';
 
+const DEFAULT_DASHBOARD_RAILS = {
+    hero: true,
+    continueWatching: true,
+    liveFavorites: true,
+    recentlyWatchedLive: true,
+    favoriteMoviesAndSeries: true,
+    recentSources: true,
+    xtreamRecentlyAdded: true,
+};
+
 class MatSnackBarStub {
     open = jest.fn();
 }
@@ -86,6 +99,7 @@ const DEFAULT_SETTINGS = {
     epgUrl: [],
     recordingFolder: '',
     coverSize: 'medium',
+    dashboardRails: DEFAULT_DASHBOARD_RAILS,
     preferUploadedEpgOverXtream: false,
 };
 
@@ -93,6 +107,21 @@ class MockSettingsStore {
     private _settings = signal(DEFAULT_SETTINGS);
 
     getSettings = () => this._settings();
+
+    getTrustOptions = () => ({
+        trustedPrivateNetworkEpgUrls:
+            (
+                this._settings() as typeof DEFAULT_SETTINGS & {
+                    trustedPrivateNetworkEpgUrls?: string[];
+                }
+            ).trustedPrivateNetworkEpgUrls ?? [],
+        trustedInsecureTlsHosts:
+            (
+                this._settings() as typeof DEFAULT_SETTINGS & {
+                    trustedInsecureTlsHosts?: string[];
+                }
+            ).trustedInsecureTlsHosts ?? [],
+    });
 
     loadSettings = jest.fn().mockResolvedValue(undefined);
 
@@ -488,9 +517,7 @@ describe('SettingsComponent', () => {
                 expect(
                     component
                         .players()
-                        .some(
-                            (player) => player.id === VideoPlayer.EmbeddedMpv
-                        )
+                        .some((player) => player.id === VideoPlayer.EmbeddedMpv)
                 ).toBe(true);
             }
         );
@@ -515,9 +542,9 @@ describe('SettingsComponent', () => {
             partialBridgeFixture.detectChanges();
 
             expect(partialBridgeComponent.isDesktop).toBe(true);
-            expect(
-                partialBridgeComponent.supportsManagedExternalPlayers
-            ).toBe(false);
+            expect(partialBridgeComponent.supportsManagedExternalPlayers).toBe(
+                false
+            );
             expect(
                 partialBridgeComponent.supportsExternalPlayerPathSettings
             ).toBe(false);
@@ -611,9 +638,7 @@ describe('SettingsComponent', () => {
             ).toBe(false);
 
             if (!resolveSupport) {
-                throw new Error(
-                    'Expected embedded MPV support probe to start'
-                );
+                throw new Error('Expected embedded MPV support probe to start');
             }
 
             resolveSupport({
@@ -882,7 +907,10 @@ describe('SettingsComponent', () => {
     it('should force-fetch EPG for a single URL (bypassing freshness cache)', () => {
         const url = 'http://epg-url-here/data.xml';
         component.refreshEpg(url);
-        expect(epgBridge.forceFetchEpg).toHaveBeenCalledWith(url);
+        expect(epgBridge.forceFetchEpg).toHaveBeenCalledWith(url, {
+            trustedPrivateNetworkEpgUrls: [],
+            trustedInsecureTlsHosts: [],
+        });
     });
 
     it('clears EPG data with a busy state and refreshes all sources on success', async () => {
@@ -1090,7 +1118,7 @@ describe('SettingsComponent', () => {
         });
     });
 
-    it('renders workspace startup controls with the expected defaults', () => {
+    it('renders dashboard controls with the expected defaults', () => {
         const nativeElement = fixture.nativeElement as HTMLElement;
 
         expect(
@@ -1098,10 +1126,58 @@ describe('SettingsComponent', () => {
                 '[data-test-id="toggle-show-dashboard"]'
             )
         ).not.toBeNull();
+        expect(
+            nativeElement.querySelector(
+                '[data-test-id="toggle-dashboard-hero"]'
+            )
+        ).not.toBeNull();
+        expect(
+            nativeElement.querySelector(
+                '[data-test-id="toggle-dashboard-rail-live-favorites"]'
+            )
+        ).not.toBeNull();
+        expect(
+            nativeElement.querySelector(
+                '[data-test-id="toggle-dashboard-rail-recently-watched-live"]'
+            )
+        ).not.toBeNull();
+        expect(
+            nativeElement.querySelector(
+                '[data-test-id="toggle-dashboard-rail-favorite-movies-and-series"]'
+            )
+        ).not.toBeNull();
         expect(component.settingsForm.value.showDashboard).toBe(true);
+        expect(component.settingsForm.value.dashboardRails).toEqual(
+            DEFAULT_DASHBOARD_RAILS
+        );
         expect(component.settingsForm.value.startupBehavior).toBe(
             StartupBehavior.FirstView
         );
+    });
+
+    it('disables dashboard surface controls when the dashboard is off', async () => {
+        const showDashboard = component.settingsForm.get('showDashboard');
+        const dashboardRails = component.settingsForm.get('dashboardRails');
+
+        showDashboard?.setValue(false);
+        await fixture.whenStable();
+
+        expect(dashboardRails?.disabled).toBe(true);
+        expect(
+            component.settingsForm.get('dashboardRails.hero')?.disabled
+        ).toBe(true);
+        expect(
+            component.settingsForm.get('dashboardRails.continueWatching')
+                ?.disabled
+        ).toBe(true);
+
+        showDashboard?.setValue(true);
+        await fixture.whenStable();
+
+        expect(dashboardRails?.enabled).toBe(true);
+        expect(
+            component.settingsForm.get('dashboardRails.hero')?.enabled
+        ).toBe(true);
     });
 
     it('should save settings on submit', async () => {
@@ -1112,12 +1188,16 @@ describe('SettingsComponent', () => {
         component.onSubmit();
         await fixture.whenStable();
 
-        expect(mockStore.updateSettings).toHaveBeenCalledWith(
-            component.settingsForm.value
-        );
-        expect(updateSettings).toHaveBeenCalledWith(
-            component.settingsForm.value
-        );
+        expect(mockStore.updateSettings).toHaveBeenCalledWith({
+            ...component.settingsForm.value,
+            trustedPrivateNetworkEpgUrls: [],
+            trustedInsecureTlsHosts: [],
+        });
+        expect(updateSettings).toHaveBeenCalledWith({
+            ...component.settingsForm.value,
+            trustedPrivateNetworkEpgUrls: [],
+            trustedInsecureTlsHosts: [],
+        });
     });
 
     it('clears external player paths in Electron when saved as empty', async () => {
